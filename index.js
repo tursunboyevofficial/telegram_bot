@@ -27,61 +27,107 @@ async function main() {
   console.log("✅ Userbot ishga tushdi!");
 
   client.addEventHandler(
-    async (event) => {
-      const msg = event.message;
-      if (!msg || msg.out) return; // o‘z xabarlaringizni o'tkazib yuboradi
+  async (event) => {
+    const msg = event.message;
+    if (!msg) return;
 
-      const from = msg.sender;
+    // ✅ Faqat private chat
+    if (!msg.isPrivate) return;
 
-      let header = `📩 Yangi xabar:\n\n👤 Foydalanuvchi: ${
-        from?.firstName || ""
-      } ${from?.lastName || ""} (@${from?.username || "yo'q"})\nID: ${
-        from?.id?.toString() || "yo'q"
-      }\n\n`;
+    // ✅ O‘zingiz yuborgan xabarlarni olmaydi
+    if (msg.out) return;
 
-      try {
-        // Matn
-        if (msg.message) {
-          await bot.telegram.sendMessage(myId, header + `📄 Matn:\n${msg.message}`);
-        }
-        // Foto
-        else if (msg.media?.photo) {
-          const buffer = await client.downloadMedia(msg.media);
-          await bot.telegram.sendPhoto(myId, { source: buffer }, { caption: header + "📸 Foto yubordi" });
-        }
-        // Video
-        else if (msg.media?.document && msg.media.document.mimeType.startsWith("video/")) {
-          const buffer = await client.downloadMedia(msg.media);
-          await bot.telegram.sendVideo(myId, { source: buffer }, { caption: header + "🎬 Video yubordi" });
-        }
-        // Audio
-        else if (msg.media?.document && msg.media.document.mimeType.startsWith("audio/")) {
-          const buffer = await client.downloadMedia(msg.media);
-          await bot.telegram.sendAudio(myId, { source: buffer }, { caption: header + "🎵 Audio yubordi" });
-        }
-        // Hujjat (document)
-        else if (msg.media?.document) {
-          const buffer = await client.downloadMedia(msg.media);
-          const fileName =
-            msg.media.document.attributes?.find((a) => a.fileName)?.fileName || "fayl.unknown";
-          await bot.telegram.sendDocument(myId, { source: buffer, filename: fileName }, { caption: header + `📂 Fayl: ${fileName}` });
-        }
-        // Sticker
-        else if (msg.media?.document && msg.media.document.mimeType === "image/webp") {
-          const buffer = await client.downloadMedia(msg.media);
-          await bot.telegram.sendSticker(myId, { source: buffer });
-          await bot.telegram.sendMessage(myId, header + "⭐ Sticker yubordi");
-        }
-        // Boshqa turdagi media
-        else {
-          await bot.telegram.sendMessage(myId, header + "❔ Boshqa turdagi xabar");
-        }
-      } catch (err) {
-        console.error("❌ Bot orqali yuborishda xato:", err.message);
+    // ✅ Kim yuborganini olish
+    const sender = await msg.getSender();
+
+    // ✅ Agar bot bo‘lsa o'tkazib yuborish
+    if (sender?.bot) return;
+
+    // ✅ Agar yuboruvchi o‘zingiz bo‘lsangiz ham o'tkazib yuborish
+    if (sender?.id?.toString() === myId.toString()) return;
+
+    // Header
+    let header = `📩 Yangi xabar:\n\n👤 Foydalanuvchi: ${
+      sender?.firstName || ""
+    } ${sender?.lastName || ""} (@${sender?.username || "yo'q"})\nID: ${
+      sender?.id?.toString() || "yo'q"
+    }\n\n`;
+
+    try {
+      // Matn
+      if (msg.message) {
+        await bot.telegram.sendMessage(
+          myId,
+          header + `📄 Matn:\n${msg.message}`
+        );
       }
-    },
-    new NewMessage({ incoming: true })
-  );
+      // Foto
+      else if (msg.media?.photo) {
+        const buffer = await client.downloadMedia(msg.media);
+        await bot.telegram.sendPhoto(
+          myId,
+          { source: buffer },
+          { caption: header + "📸 Foto yubordi" }
+        );
+      }
+      // Video
+      else if (
+        msg.media?.document &&
+        msg.media.document.mimeType.startsWith("video/")
+      ) {
+        const buffer = await client.downloadMedia(msg.media);
+        await bot.telegram.sendVideo(
+          myId,
+          { source: buffer },
+          { caption: header + "🎬 Video yubordi" }
+        );
+      }
+      // Audio
+      else if (
+        msg.media?.document &&
+        msg.media.document.mimeType.startsWith("audio/")
+      ) {
+        const buffer = await client.downloadMedia(msg.media);
+        await bot.telegram.sendAudio(
+          myId,
+          { source: buffer },
+          { caption: header + "🎵 Audio yubordi" }
+        );
+      }
+      // Document
+      else if (msg.media?.document) {
+        const buffer = await client.downloadMedia(msg.media);
+        const fileName =
+          msg.media.document.attributes?.find((a) => a.fileName)?.fileName ||
+          "fayl.unknown";
+        await bot.telegram.sendDocument(
+          myId,
+          { source: buffer, filename: fileName },
+          { caption: header + `📂 Fayl: ${fileName}` }
+        );
+      }
+      // Sticker
+      else if (
+        msg.media?.document &&
+        msg.media.document.mimeType === "image/webp"
+      ) {
+        const buffer = await client.downloadMedia(msg.media);
+        await bot.telegram.sendSticker(myId, { source: buffer });
+        await bot.telegram.sendMessage(myId, header + "⭐ Sticker yubordi");
+      }
+      // Noma’lum tur
+      else {
+        await bot.telegram.sendMessage(
+          myId,
+          header + "❔ Boshqa turdagi xabar"
+        );
+      }
+    } catch (err) {
+      console.error("❌ Bot orqali yuborishda xato:", err.message);
+    }
+  },
+  new NewMessage({ incoming: true })
+);
 }
 
 // Userbot ishga tushirish
